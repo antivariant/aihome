@@ -55,7 +55,7 @@
 |---------|-------|
 | Локальный интерфейс HA | `https://raspberrypi.local:8123/` (планируется `https://homeassistant.local:8123/`) |
 | Внешний доступ через DuckDNS | `https://antivariant.duckdns.org:8123/` |
-| SSH-доступ к Pi | `ssh pi@192.168.31.81` (пароль `masterkey`) |
+| SSH-доступ к Pi | `ssh user@192.168.31.81` |
 
 ---
 
