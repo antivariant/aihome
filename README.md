@@ -30,7 +30,7 @@
 
 ### Основное ПО на Raspberry Pi
 
-- Raspberry Pi OS Lite (64-bit)
+- Raspberry Pi OS Lite(64-bit)
 - Docker
 - Home Assistant OS (Core 2025.4.4 / Supervisor 2025.04.1)
 - MotionEye (в виде плагина Home Assistant)
