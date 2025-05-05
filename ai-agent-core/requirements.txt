@@ -1,0 +1,8 @@
+langchain
+openai
+requests
+python-dotenv
+pydantic
+fastapi
+uvicorn[standard]
+redis>=4.5.5

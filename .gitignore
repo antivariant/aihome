@@ -1,1 +1,6 @@
 .env
+/data/mongo/
+/data/mqtt/
+/data/redis/
+/services/chat-gateway/uploads/
+
