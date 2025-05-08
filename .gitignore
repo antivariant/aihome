@@ -3,4 +3,6 @@
 /data/mqtt/
 /data/redis/
 /services/chat-gateway/uploads/
-
+/gateways/face/sadtalker/
+/models/sadtalker/checkpoints/
+/models/sadtalker/gfpgan/

@@ -1,142 +1,204 @@
 services:
-  redis:
-    container_name: redis
-    image: redis:7-alpine
+
+  # ====================
+  # 🧠 Ядро AI-агента
+  # ====================
+  ai-engine:
+    build: ./ai-engine
+    container_name: ai-engine
+    depends_on:
+      - svc-stt
+      - svc-vision
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - HA_BASE_URL=http://192.168.31.81:8123
+      - HA_TOKEN=${HA_TOKEN}
+      - PORT=6000
     ports:
-      - "6379:6379"
-    volumes:
-      - ./data/redis:/data
+      - 6000:6000
     restart: unless-stopped
+    volumes:
+      - ./config/langchain_config.yaml:/app/langchain_config.yaml
+      - ./config/devices.yaml:/app/devices.yaml
+
+  # ====================
+  # 🔌 Шлюзы (Gateways)
+  # ====================
+
+  gw-chat:
+    build: ./gateways/chat
+    container_name: gw-chat
+    depends_on:
+      - ai-engine
+    environment:
+      - CHAT_API_TOKEN=${CHAT_API_TOKEN}
+      - AGENT_URL=http://ai-engine:5000/agent/process
+      - PORT=5120
+    ports:
+      - 5120:5120
+    restart: unless-stopped
+    volumes:
+      - ./gateways/chat/uploads:/app/uploads
+
+  gw-audio_in:
+    build: ./gateways/audio-in
+    container_name: gw-audio_in
+    depends_on:
+      - svc-stt
+    environment:
+      - STT_URL=http://svc-stt:5230/stt
+      - PORT=5130
+    ports:
+      - 5130:5130
+    restart: unless-stopped
+    volumes:
+      - ./gateways/audio-in/recordings:/app/recordings
+
+  gw-audio_out:
+    build: ./gateways/audio-out
+    container_name: gw-audio_out
+    environment:
+      - PORT=5140
+    ports:
+      - 5140:5140
+    restart: unless-stopped
+
+  gw-screen_vision:
+    build: ./gateways/screen-vision
+    container_name: gw-screen_vision
+    environment:
+      - PORT=5160
+    ports:
+      - 5160:5160
+    restart: unless-stopped
+
+  gw-actuators:
+    build: ./gateways/actuators
+    container_name: gw-actuators
+    environment:
+      - PORT=5170
+    ports:
+      - 5170:5170
+    restart: unless-stopped
+
+  gw-face:
+    build: ./gateways/face
+    container_name: gw-face
+    environment:
+      - PORT=5180
+    ports:
+      - 5180:5180
+    restart: unless-stopped
+    volumes:
+      - ./models/sadtalker/checkpoints:/app/sadtalker/checkpoints
+      - ./models/sadtalker/gfpgan/weights:/app/sadtalker/gfpgan/weights
+
+
+  # ====================
+  # 🧠 Сервисы (Services)
+  # ====================
+
+  svc-db:
+    build: ./core-services/db
+    container_name: svc-db
+    depends_on:
+      - redis
+      - mongo
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONGODB_URI=mongodb://mongo:27017
+      - PORT=5210
+    ports:
+      - 5210:5210
+    restart: unless-stopped
+
+  svc-stt:
+    build: ./core-services/stt
+    container_name: svc-stt
+    environment:
+      - PORT=5230
+    ports:
+      - 5230:5230
+    restart: unless-stopped
+
+  svc-tts:
+    build: ./core-services/tts
+    container_name: svc-tts
+    environment:
+      - PORT=5240
+    ports:
+      - 5240:5240
+    restart: unless-stopped
+    volumes:
+      - ./models/tts:/models
+
+  svc-vision:
+    build: ./core-services/vision
+    container_name: svc-vision
+    environment:
+      - PORT=5250
+    ports:
+      - 5250:5250
+    restart: unless-stopped
+    volumes:
+      - ./models/vision:/models
+
+  svc-screen_vision:
+    build: ./core-services/screen-vision
+    container_name: svc-screen_vision
+    environment:
+      - PORT=5260
+    ports:
+      - 5260:5260
+    restart: unless-stopped
+
+  # ====================
+  # ⚙️ Драйверы (Drivers)
+  # ====================
+
+  drv-mic_usb:
+    build: ./drivers/mic-usb
+    container_name: drv-mic_usb
+    depends_on:
+      - gw-audio_in
+    environment:
+      - AUDIO_FILE=/app/audio/mock_audio.wav
+      - STREAM_INTERVAL=5
+      - TARGET_URL=http://gw-audio_in:5130/ingest
+      - AUDIO_GATEWAY_URL=http://gw-audio_in:5130/receive-audio
+      - PORT=5330
+    ports: []
+    restart: unless-stopped
+    volumes:
+      - ./mock/audio:/app/audio
+
+  # ====================
+  # 📦 Базы данных и брокеры
+  # ====================
 
   mongo:
     container_name: mongo
     image: mongo:7
     ports:
-      - "27017:27017"
+      - 27017:27017
+    restart: unless-stopped
     volumes:
       - ./data/mongo:/data/db
+
+  redis:
+    container_name: redis
+    image: redis:7-alpine
+    ports:
+      - 6379:6379
     restart: unless-stopped
+    volumes:
+      - ./data/redis:/data
 
   mqtt:
-    container_name: mqtt
-    image: eclipse-mosquitto:2
-    volumes:
-      - ./config/mqtt:/mosquitto/config
-      - ./data/mqtt:/mosquitto/data
-      - ./log/mqtt:/mosquitto/log
+    image: eclipse-mosquitto
     ports:
       - 1883:1883
       - 9001:9001
-    restart: unless-stopped
-
-  audio_stream_gateway:
-    container_name: audio-stream-gateway
-    build: ./services/audio-stream-gateway
-    ports:
-      - 5050:5050
     volumes:
-      - ./services/audio-stream-gateway/recordings:/app/recordings
-    environment:
-      - STT_URL=http://stt-service:5060/stt
-    depends_on:
-      - stt_service
-    restart: unless-stopped
-
-  usb_mic_service:
-    container_name: usb-mic-service
-    build: ./services/usb-mic-service
-    volumes:
-      - ./mock/audio:/app/audio        # здесь будет храниться мок-аудио
-    environment:
-      - AUDIO_FILE=/app/audio/mock_audio.wav  # путь до мок-файла, можно поменять
-      - STREAM_INTERVAL=5  # интервал между отправками (в секундах)
-      - TARGET_URL=http://audio-stream-gateway:5050/ingest
-    depends_on:
-      - audio_stream_gateway
-    restart: unless-stopped
-
-
-
-  stt_service:
-    container_name: stt-service
-    build: ./services/stt-service
-    ports:
-      - "5060:5060"
-    restart: unless-stopped
-
-
-  vision_agent:
-    container_name: vision-agent
-    build: ./services/vision-agent
-    volumes:
-      - ./models/vision:/models
-    ports:
-      - 6060:6060
-    restart: unless-stopped
-
-  langchain_agent:
-    container_name: langchain-agent
-    build: ./ai-agent-core
-    volumes:
-      - ./config/langchain_config.yaml:/app/langchain_config.yaml
-      - ./config/devices.yaml:/app/devices.yaml
-    depends_on:
-      - stt_service
-      - vision_agent
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - HA_BASE_URL=http://192.168.31.81:8123
-      - HA_TOKEN=${HA_TOKEN}
-    restart: unless-stopped
-
-  chat_gateway:
-    container_name: chat-gateway
-    build: ./services/chat-gateway
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./services/chat-gateway/uploads:/app/uploads
-    environment:
-      - CHAT_API_TOKEN=${CHAT_API_TOKEN}
-      - AGENT_URL=http://langchain-agent:8000/agent/process
-    depends_on:
-      - langchain_agent
-    restart: unless-stopped
-
-  db_service:
-    container_name: db-service
-    build: ./services/db-service
-    ports:
-      - "8090:8090" 
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - MONGODB_URI=mongodb://mongo:27017
-    depends_on:
-      - redis
-      - mongo
-    restart: unless-stopped
-
-  tts_service:
-    container_name: tts-service
-    build: ./services/tts-service
-    volumes:
-      - ./models/tts:/models
-    restart: unless-stopped
-
-  speaker_service:
-    container_name: speaker-service
-    build: ./services/speaker-service
-    ports:
-      - 7070:7070
-    restart: unless-stopped
-
-  face_display:
-    container_name: face-display
-    build: ./services/face-display
-    restart: unless-stopped
-
-  actuator_control:
-    container_name: actuator-control
-    build: ./services/actuator-control
-    restart: unless-stopped
+      - ./config/mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
