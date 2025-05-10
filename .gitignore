@@ -1,8 +1,7 @@
 .env
-/data/mongo/
-/data/mqtt/
-/data/redis/
+/data/
 /services/chat-gateway/uploads/
 /gateways/face/sadtalker/
-/models/sadtalker/checkpoints/
-/models/sadtalker/gfpgan/
+/models/
+/gateways/face/Wav2Lip/
+/gateways/face/test/

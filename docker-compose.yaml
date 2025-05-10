@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
 
   # ====================
@@ -59,9 +61,13 @@ services:
     container_name: gw-audio_out
     environment:
       - PORT=5140
+      - TTS_URL=http://svc-tts:5240/speak
+      - TTS_WAV_PATH=/shared-wav
     ports:
       - 5140:5140
     restart: unless-stopped
+    volumes:
+      - ./data/tts-wav:/shared-wav
 
   gw-screen_vision:
     build: ./gateways/screen-vision
@@ -90,9 +96,7 @@ services:
       - 5180:5180
     restart: unless-stopped
     volumes:
-      - ./models/sadtalker/checkpoints:/app/sadtalker/checkpoints
-      - ./models/sadtalker/gfpgan/weights:/app/sadtalker/gfpgan/weights
-
+      - ./models/wav2lip/:/app/wav2lip/checkpoints
 
   # ====================
   # 🧠 Сервисы (Services)
@@ -127,11 +131,17 @@ services:
     container_name: svc-tts
     environment:
       - PORT=5240
+      - WAV_OUTPUT_DIR=/shared-wav
+      - MODELS_DIR=/models
+      - LD_LIBRARY_PATH=/app/piper
     ports:
       - 5240:5240
     restart: unless-stopped
     volumes:
       - ./models/tts:/models
+      - ./data/tts-wav:/shared-wav
+    security_opt:
+      - no-new-privileges:true
 
   svc-vision:
     build: ./core-services/vision
