@@ -1,7 +1,19 @@
 .env
 /data/
+
+# Gateways
+/gateways/frai/sadtalker/
+/gateways/frai/Wav2Lip/
+/gateways/frai/test/
+
+# Services
 /services/chat-gateway/uploads/
-/gateways/face/sadtalker/
-/models/
-/gateways/face/Wav2Lip/
-/gateways/face/test/
+
+# Models
+/models/sadtalker/checkpoints/
+/models/sadtalker/gfpgan/
+/models/Wav2Lip/wav2lip.pth
+/models/piper/ar/
+/models/piper/en/
+/models/piper/ru/
+/models/piper/zh/

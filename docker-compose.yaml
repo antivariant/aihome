@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
 
   # ====================
@@ -35,65 +33,20 @@ services:
     environment:
       - CHAT_API_TOKEN=${CHAT_API_TOKEN}
       - AGENT_URL=http://ai-engine:5000/agent/process
-      - PORT=5120
+      - PORT=5121
     ports:
-      - 5120:5120
+      - 5121:5121
     restart: unless-stopped
     volumes:
       - ./gateways/chat/uploads:/app/uploads
 
-  gw-audio_in:
-    build: ./gateways/audio-in
-    container_name: gw-audio_in
-    depends_on:
-      - svc-stt
+  gw-frai:
+    build: ./gateways/frai
+    container_name: gw-frai
     environment:
-      - STT_URL=http://svc-stt:5230/stt
-      - PORT=5130
+      - PORT=5181
     ports:
-      - 5130:5130
-    restart: unless-stopped
-    volumes:
-      - ./gateways/audio-in/recordings:/app/recordings
-
-  gw-audio_out:
-    build: ./gateways/audio-out
-    container_name: gw-audio_out
-    environment:
-      - PORT=5140
-      - TTS_URL=http://svc-tts:5240/speak
-      - TTS_WAV_PATH=/shared-wav
-    ports:
-      - 5140:5140
-    restart: unless-stopped
-    volumes:
-      - ./data/tts-wav:/shared-wav
-
-  gw-screen_vision:
-    build: ./gateways/screen-vision
-    container_name: gw-screen_vision
-    environment:
-      - PORT=5160
-    ports:
-      - 5160:5160
-    restart: unless-stopped
-
-  gw-actuators:
-    build: ./gateways/actuators
-    container_name: gw-actuators
-    environment:
-      - PORT=5170
-    ports:
-      - 5170:5170
-    restart: unless-stopped
-
-  gw-face:
-    build: ./gateways/face
-    container_name: gw-face
-    environment:
-      - PORT=5180
-    ports:
-      - 5180:5180
+      - 5181:5181
     restart: unless-stopped
     volumes:
       - ./models/wav2lip/:/app/wav2lip/checkpoints
@@ -101,9 +54,62 @@ services:
   # ====================
   # 🧠 Сервисы (Services)
   # ====================
+  svc-frai-audio-in:
+    build: ./services/frai-audio-in
+    container_name: svc-frai-audio-in
+    depends_on:
+      - svc-stt
+    environment:
+      - STT_URL=http://svc-stt:5233/stt
+      - PORT=5231
+    ports:
+      - 5231:5231
+    restart: unless-stopped
+    volumes:
+      - ./gateways/audio-in/recordings:/app/recordings
+
+  svc-frai-audio-out:
+    build: ./services/frai-audio-out
+    container_name: svc-frai-audio-out
+    environment:
+      - PORT=5241
+      - TTS_URL=http://svc-tts:5243/speak
+      - TTS_WAV_PATH=/shared-wav
+    ports:
+      - 5241:5241
+    restart: unless-stopped
+    volumes:
+      - ./data/tts-wav:/shared-wav
+
+  svc-dev-audio-in:
+    build: ./services/dev-audio-in
+    container_name: svc-dev-audio-in
+    depends_on:
+      - svc-stt
+    environment:
+      - STT_URL=http://svc-stt:5233/stt
+      - PORT=5232
+    ports:
+      - 5232:5232
+    restart: unless-stopped
+    volumes:
+      - ./gateways/audio-in/recordings:/app/recordings
+
+  svc-dev-audio-out:
+    build: ./services/dev-audio-out
+    container_name: svc-dev-audio-out
+    environment:
+      - PORT=5242
+      - TTS_URL=http://svc-tts:5243/speak
+      - TTS_WAV_PATH=/shared-wav
+    ports:
+      - 5242:5242
+    restart: unless-stopped
+    volumes:
+      - ./data/tts-wav:/shared-wav
 
   svc-db:
-    build: ./core-services/db
+    build: ./services/db
     container_name: svc-db
     depends_on:
       - redis
@@ -112,71 +118,80 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - MONGODB_URI=mongodb://mongo:27017
-      - PORT=5210
+      - PORT=5211
     ports:
-      - 5210:5210
+      - 5211:5211
     restart: unless-stopped
 
   svc-stt:
-    build: ./core-services/stt
+    build: ./services/stt
     container_name: svc-stt
     environment:
-      - PORT=5230
+      - PORT=5233
     ports:
-      - 5230:5230
+      - 5233:5233
     restart: unless-stopped
 
   svc-tts:
-    build: ./core-services/tts
+    build: ./services/tts
     container_name: svc-tts
     environment:
-      - PORT=5240
+      - PORT=5243
       - WAV_OUTPUT_DIR=/shared-wav
       - MODELS_DIR=/models
       - LD_LIBRARY_PATH=/app/piper
     ports:
-      - 5240:5240
+      - 5243:5243
     restart: unless-stopped
     volumes:
-      - ./models/tts:/models
+      - ./models/piper:/models
       - ./data/tts-wav:/shared-wav
     security_opt:
       - no-new-privileges:true
 
   svc-vision:
-    build: ./core-services/vision
+    build: ./services/vision
     container_name: svc-vision
     environment:
-      - PORT=5250
+      - PORT=5251
     ports:
-      - 5250:5250
+      - 5251:5251
     restart: unless-stopped
     volumes:
       - ./models/vision:/models
 
   svc-screen_vision:
-    build: ./core-services/screen-vision
+    build: ./services/screen-vision
     container_name: svc-screen_vision
     environment:
-      - PORT=5260
+      - PORT=5261
     ports:
-      - 5260:5260
+      - 5261:5261
+    restart: unless-stopped
+
+  svc-actuators:
+    build: ./services/actuators
+    container_name: svc-actuators
+    environment:
+      - PORT=5271
+    ports:
+      - 5271:5271
     restart: unless-stopped
 
   # ====================
   # ⚙️ Драйверы (Drivers)
   # ====================
 
-  drv-mic_usb:
+  drv-mic-usb:
     build: ./drivers/mic-usb
-    container_name: drv-mic_usb
+    container_name: drv-mic-usb
     depends_on:
-      - gw-audio_in
+      - svc-dev-audio-in
     environment:
       - AUDIO_FILE=/app/audio/mock_audio.wav
       - STREAM_INTERVAL=5
-      - TARGET_URL=http://gw-audio_in:5130/ingest
-      - AUDIO_GATEWAY_URL=http://gw-audio_in:5130/receive-audio
+      - TARGET_URL=http://svc-dev-audio-in:5232/ingest
+      - AUDIO_GATEWAY_URL=http://svc-dev-audio-in:5232/receive-audio
       - PORT=5330
     ports: []
     restart: unless-stopped
@@ -184,7 +199,7 @@ services:
       - ./mock/audio:/app/audio
 
   # ====================
-  # 📦 Базы данных и брокеры
+  # 📆 Базы данных и брокеры
   # ====================
 
   mongo:

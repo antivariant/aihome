@@ -1,0 +1,4 @@
+# Add Python dependencies here
+fastapi
+uvicorn[standard]
+requests
