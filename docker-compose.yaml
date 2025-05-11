@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
 
   # ====================
@@ -24,7 +26,6 @@ services:
   # ====================
   # 🔌 Шлюзы (Gateways)
   # ====================
-
   gw-chat:
     build: ./gateways/chat
     container_name: gw-chat
@@ -38,7 +39,7 @@ services:
       - 5121:5121
     restart: unless-stopped
     volumes:
-      - ./gateways/chat/uploads:/app/uploads
+      - ./data/gw-chat/uploads:/app/uploads
 
   gw-frai:
     build: ./gateways/frai
@@ -66,7 +67,7 @@ services:
       - 5231:5231
     restart: unless-stopped
     volumes:
-      - ./gateways/audio-in/recordings:/app/recordings
+      - ./data/svc-frai-audio-in/recordings:/app/recordings
 
   svc-frai-audio-out:
     build: ./services/frai-audio-out
@@ -79,7 +80,7 @@ services:
       - 5241:5241
     restart: unless-stopped
     volumes:
-      - ./data/tts-wav:/shared-wav
+      - ./data/svc-frai-audio-out/tts-wav:/shared-wav
 
   svc-dev-audio-in:
     build: ./services/dev-audio-in
@@ -93,7 +94,7 @@ services:
       - 5232:5232
     restart: unless-stopped
     volumes:
-      - ./gateways/audio-in/recordings:/app/recordings
+      - ./data/svc-dev-audio-in/recordings:/app/recordings
 
   svc-dev-audio-out:
     build: ./services/dev-audio-out
@@ -106,7 +107,7 @@ services:
       - 5242:5242
     restart: unless-stopped
     volumes:
-      - ./data/tts-wav:/shared-wav
+      - ./data/svc-dev-audio-out/tts-wav:/shared-wav
 
   svc-db:
     build: ./services/db
@@ -145,7 +146,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./models/piper:/models
-      - ./data/tts-wav:/shared-wav
+      - ./data/svc-tts/tts-wav:/shared-wav
     security_opt:
       - no-new-privileges:true
 
@@ -181,7 +182,6 @@ services:
   # ====================
   # ⚙️ Драйверы (Drivers)
   # ====================
-
   drv-mic-usb:
     build: ./drivers/mic-usb
     container_name: drv-mic-usb
@@ -196,12 +196,11 @@ services:
     ports: []
     restart: unless-stopped
     volumes:
-      - ./mock/audio:/app/audio
+      - ./data/drv-mic-usb/audio:/app/audio
 
   # ====================
   # 📆 Базы данных и брокеры
   # ====================
-
   mongo:
     container_name: mongo
     image: mongo:7
@@ -209,7 +208,7 @@ services:
       - 27017:27017
     restart: unless-stopped
     volumes:
-      - ./data/mongo:/data/db
+      - ./data/mongo/data:/data/db
 
   redis:
     container_name: redis
@@ -218,7 +217,7 @@ services:
       - 6379:6379
     restart: unless-stopped
     volumes:
-      - ./data/redis:/data
+      - ./data/redis/data:/data
 
   mqtt:
     image: eclipse-mosquitto
