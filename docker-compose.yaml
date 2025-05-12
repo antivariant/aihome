@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
 
   # ====================
@@ -23,6 +21,7 @@ services:
       - ./config/langchain_config.yaml:/app/langchain_config.yaml
       - ./config/devices.yaml:/app/devices.yaml
 
+
   # ====================
   # 🔌 Шлюзы (Gateways)
   # ====================
@@ -45,9 +44,20 @@ services:
     build: ./gateways/frai
     container_name: gw-frai
     environment:
-      - PORT=5181
+      - PORT=5101
     ports:
-      - 5181:5181
+      - 5101:5101
+    restart: unless-stopped
+    volumes:
+      - ./models/wav2lip/:/app/wav2lip/checkpoints
+
+  gw-dev:
+    build: ./gateways/dev
+    container_name: gw-dev
+    environment:
+      - PORT=5103
+    ports:
+      - 5103:5103
     restart: unless-stopped
     volumes:
       - ./models/wav2lip/:/app/wav2lip/checkpoints
@@ -55,9 +65,9 @@ services:
   # ====================
   # 🧠 Сервисы (Services)
   # ====================
-  svc-frai-audio-in:
-    build: ./services/frai-audio-in
-    container_name: svc-frai-audio-in
+  svc-audio-in:
+    build: ./services/audio-in
+    container_name: svc-audio-in
     depends_on:
       - svc-stt
     environment:
@@ -69,9 +79,9 @@ services:
     volumes:
       - ./data/svc-frai-audio-in/recordings:/app/recordings
 
-  svc-frai-audio-out:
-    build: ./services/frai-audio-out
-    container_name: svc-frai-audio-out
+  svc-audio-out:
+    build: ./services/audio-out
+    container_name: svc-audio-out
     environment:
       - PORT=5241
       - TTS_URL=http://svc-tts:5243/speak
@@ -82,32 +92,6 @@ services:
     volumes:
       - ./data/svc-frai-audio-out/tts-wav:/shared-wav
 
-  svc-dev-audio-in:
-    build: ./services/dev-audio-in
-    container_name: svc-dev-audio-in
-    depends_on:
-      - svc-stt
-    environment:
-      - STT_URL=http://svc-stt:5233/stt
-      - PORT=5232
-    ports:
-      - 5232:5232
-    restart: unless-stopped
-    volumes:
-      - ./data/svc-dev-audio-in/recordings:/app/recordings
-
-  svc-dev-audio-out:
-    build: ./services/dev-audio-out
-    container_name: svc-dev-audio-out
-    environment:
-      - PORT=5242
-      - TTS_URL=http://svc-tts:5243/speak
-      - TTS_WAV_PATH=/shared-wav
-    ports:
-      - 5242:5242
-    restart: unless-stopped
-    volumes:
-      - ./data/svc-dev-audio-out/tts-wav:/shared-wav
 
   svc-db:
     build: ./services/db
@@ -186,17 +170,39 @@ services:
     build: ./drivers/mic-usb
     container_name: drv-mic-usb
     depends_on:
-      - svc-dev-audio-in
+      - svc-audio-in
     environment:
       - AUDIO_FILE=/app/audio/mock_audio.wav
       - STREAM_INTERVAL=5
       - TARGET_URL=http://svc-dev-audio-in:5232/ingest
       - AUDIO_GATEWAY_URL=http://svc-dev-audio-in:5232/receive-audio
       - PORT=5330
-    ports: []
+    ports:
+      - 52711:52711
     restart: unless-stopped
     volumes:
       - ./data/drv-mic-usb/audio:/app/audio
+
+
+  drv-mic-coreaudio:
+    build: ./drivers/mic-coreaudio
+    container_name: drv-mic-coreaudio
+    depends_on:
+      - svc-audio-in
+    environment:
+      - TARGET_URL=http://svc-dev-audio-in:5231/ingest
+      - PORT=5330
+      - DEVICE_ID=dev-macbook-001
+      - IS_FRAI=false
+      - CHUNK_DURATION=2.0
+      - OVERLAP_DURATION=0.5
+    ports:
+      - 52712:52712
+    restart: unless-stopped
+    volumes:
+      - ./data/drv-mic-usb/audio:/app/audio
+
+
 
   # ====================
   # 📆 Базы данных и брокеры
