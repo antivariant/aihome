@@ -1,158 +1,225 @@
 <template>
-  <q-card flat bordered class="bg-grey-10 text-white full-height">
-    <q-card-section class="row items-start q-gutter-md full-height justify-between">
-
-      <!-- Превью камеры -->
-      <div
-        class="frai-frame"
-        :style="{
-          width: previewWidth + 'px',
-          height: previewHeight + 'px'
-        }"
-      >
+  <q-card flat bordered class="camera-panel">
+    <div class="camera-grid">
+      <!-- 1. Preview-window -->
+      <div class="preview-container">
         <video
           ref="cameraVideo"
+          class="preview-video"
           autoplay
           muted
-          class="frai-video"
-          :style="{ objectPosition: objectPosition }"
+          playsinline
+          :style="videoStyle"
         />
       </div>
 
-      <!-- Панель управления -->
-      <div class="column q-gutter-sm items-start">
-        <div class="text-h6">Камера</div>
-
-        <q-toggle
-          v-model="cameraOnModel"
-          label="Трансляция"
-          color="green"
-        />
-
-        <div class="text-caption">FPS: {{ cameraFps }}</div>
-
-        <q-slider
-          v-model="actuatorXModel"
-          :min="0"
-          :max="180"
-          label
-        />
-        <div class="text-caption">
-          Горизонт: {{ actuatorAngleX }}°
+      <!-- 2. Controls -->
+      <div class="controls-container">
+        <!-- Заголовок -->
+        <div class="header-block">
+          <div class="camera-title">Камера</div>
         </div>
 
-        <q-slider
-          v-model="actuatorYModel"
-          :min="0"
-          :max="180"
-          label
-        />
-        <div class="text-caption">
-          Вертикаль: {{ actuatorAngleY }}°
+        <!-- Переключатель + FPS -->
+        <div class="indicators-block">
+          <q-toggle v-model="cameraOnModel" label="Трансляция" color="green" />
+          <div class="fps-text">FPS: {{ cameraFpsModel }}</div>
         </div>
+
+        <!-- Список ползунков -->
+        <q-list dense class="sliders-list">
+          <!-- FPS -->
+          <q-item>
+            <q-item-section avatar>
+              <q-icon name="timer" color="blue" />
+            </q-item-section>
+            <q-item-section>
+              <q-slider
+                v-model="cameraFpsModel"
+                :min="1"
+                :max="60"
+                label
+                track-color="grey-7"
+                thumb-color="blue"
+              />
+            </q-item-section>
+          </q-item>
+
+          <!-- Горизонт -->
+          <q-item>
+            <q-item-section avatar>
+              <q-icon name="swap_horiz" color="blue" />
+            </q-item-section>
+            <q-item-section>
+              <q-slider
+                v-model="actuatorAngleXModel"
+                :min="0"
+                :max="180"
+                label
+                track-color="grey-7"
+                thumb-color="blue"
+              />
+            </q-item-section>
+          </q-item>
+
+          <!-- Вертикаль -->
+          <q-item>
+            <q-item-section avatar>
+              <q-icon name="swap_vert" color="blue" />
+            </q-item-section>
+            <q-item-section>
+              <q-slider
+                v-model="actuatorAngleYModel"
+                :min="0"
+                :max="180"
+                label
+                track-color="grey-7"
+                thumb-color="blue"
+              />
+            </q-item-section>
+          </q-item>
+
+          <!-- Масштаб -->
+          <q-item>
+            <q-item-section avatar>
+              <q-icon name="zoom_in" color="blue" />
+            </q-item-section>
+            <q-item-section>
+              <q-slider
+                v-model="videoScaleModel"
+                :min="1"
+                :max="4"
+                :step="0.1"
+                label
+                track-color="grey-7"
+                thumb-color="blue"
+              />
+            </q-item-section>
+          </q-item>
+        </q-list>
       </div>
-    </q-card-section>
+    </div>
   </q-card>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue'
+import { ref, defineProps, defineEmits, watch, computed, onMounted } from 'vue'
 
-/* ==== Props ==== */
 const props = defineProps<{
   cameraOn: boolean
   cameraFps: number
   actuatorAngleX: number
   actuatorAngleY: number
-  previewWidth: number
-  previewHeight: number
 }>()
 
-/* ==== Emits и v-model ==== */
 const emit = defineEmits<{
-  (e: 'update:camera-on', v: boolean): void
-  (e: 'update:actuator-angle-x', v: number): void
-  (e: 'update:actuator-angle-y', v: number): void
+  (e: 'update:cameraOn', val: boolean): void
+  (e: 'update:cameraFps', val: number): void
+  (e: 'update:actuatorAngleX', val: number): void
+  (e: 'update:actuatorAngleY', val: number): void
 }>()
 
-const cameraOnModel = computed<boolean>({
-  get:  () => props.cameraOn,
-  set: v => emit('update:camera-on', v)
-})
+const cameraOnModel = ref(props.cameraOn)
+const cameraFpsModel = ref(props.cameraFps)
+const actuatorAngleXModel = ref(props.actuatorAngleX)
+const actuatorAngleYModel = ref(props.actuatorAngleY)
+const videoScaleModel = ref(2)
 
-const actuatorXModel = computed<number>({
-  get:  () => props.actuatorAngleX,
-  set: v => emit('update:actuator-angle-x', v)
-})
+watch(cameraOnModel, v => emit('update:cameraOn', v))
+watch(cameraFpsModel, v => emit('update:cameraFps', v))
+watch(actuatorAngleXModel, v => emit('update:actuatorAngleX', v))
+watch(actuatorAngleYModel, v => emit('update:actuatorAngleY', v))
 
-const actuatorYModel = computed<number>({
-  get:  () => props.actuatorAngleY,
-  set: v => emit('update:actuator-angle-y', v)
-})
-
-/* ==== Видео ==== */
 const cameraVideo = ref<HTMLVideoElement | null>(null)
-
-watch(cameraOnModel, enabled => {
-  const vid = cameraVideo.value
-  if (!vid) return
-
-  if (enabled) {
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => { vid.srcObject = stream })
-      .catch(console.error)
-  }
-  else {
-    const s = vid.srcObject as MediaStream | null
-    s?.getTracks().forEach(t => t.stop())
-    vid.srcObject = null
-  }
-})
-
-onMounted(() => {
-  if (cameraOnModel.value && cameraVideo.value) {
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => {
-        if (cameraVideo.value) {
-          cameraVideo.value.srcObject = stream
-        }
-      })
-      .catch(console.error)
-  }
-})
-
-/* ==== Смещение видео (object-position: –50%…150%) ==== */
-const objectPosition = computed(() => {
-  // 0°→180° → –50…150%
-  const x = (props.actuatorAngleX / 180) * 200 - 50
-  const y = (props.actuatorAngleY / 180) * 200 - 50
-  return `${x}% ${y}%`
-})
-
-/* ==== Быстрые ссылки на props для шаблона ==== */
-const {
-  cameraFps,
-  actuatorAngleX,
-  actuatorAngleY,
-  previewWidth,
-  previewHeight
-} = props
-</script>
-
-<style scoped>
-.frai-frame {
-  position: relative;
-  overflow: hidden;
-  background: black;
+async function startStream() {
+  if (!cameraVideo.value) return
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ video: true })
+    cameraVideo.value.srcObject = s
+  } catch (err) { console.error(err) }
+}
+function stopStream() {
+  if (!cameraVideo.value) return
+  const st = cameraVideo.value.srcObject as MediaStream | null
+  st?.getTracks().forEach(t => t.stop())
+  cameraVideo.value.srcObject = null
 }
 
-.frai-video {
+onMounted(() => { if (cameraOnModel.value) startStream() })
+watch(cameraOnModel, on => on ? startStream() : stopStream())
+
+// базовый сдвиг при масштабировании
+const baseOffset = computed(() => -(videoScaleModel.value - 1) * 50)
+// сдвиги по углам
+const angleOffsetX = computed(() =>
+  ((actuatorAngleXModel.value - 90) / 90) * 50
+)
+const angleOffsetY = computed(() =>
+  ((actuatorAngleYModel.value - 90) / 90) * 50
+)
+// итоговый стиль для <video>
+const videoStyle = computed(() => ({
+  width: `${videoScaleModel.value * 100}%`,
+  height: `${videoScaleModel.value * 100}%`,
+  transform: `
+    translate(
+      ${baseOffset.value + angleOffsetX.value}%,
+      ${baseOffset.value + angleOffsetY.value}%
+    )
+  `
+}))
+</script>
+
+
+<style scoped>
+.camera-panel {
+  height: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+.camera-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  height: 100%;
+}
+
+.preview-container {
+  position: relative;
+  background: #000;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+}
+.preview-video {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
+}
+
+.controls-container {
+  display: flex;
+  flex-direction: column;
+  row-gap: 20px;
   height: 100%;
-  object-fit: cover;
-  /* object-position задаётся inline-стилем через computed */
+}
+.header-block {
+  display: flex;
+  justify-content: center;
+}
+.camera-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+.indicators-block {
+  display: flex;
+  align-items: center;
+  column-gap: 12px;
+}
+.fps-text {
+  font-size: 1rem;
+}
+.sliders-list {
+  flex-grow: 1;
+  overflow-y: auto;
 }
 </style>

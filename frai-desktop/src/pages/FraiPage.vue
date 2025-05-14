@@ -1,154 +1,117 @@
 <template>
-  <q-page padding class="frai-page bg-dark text-white">
-    <div class="column q-gutter-md items-center">
+  <q-page class="frai-page">
 
-      <!-- Верхний ряд -->
-      <div class="row q-gutter-md full-width justify-center items-start">
-        <!-- Камера -->
+    <div class="frai-grid">
+      <!-- 1. Камера -->
+      <div class="frai-cell camera-cell">
         <CameraPanel
-          v-model:camera-on="isCameraOn"
-          :camera-fps="cameraFps"
-          v-model:actuator-angle-x="actuatorAngleX"
-          v-model:actuator-angle-y="actuatorAngleY"
-          :preview-width="cameraPreview.width"
-          :preview-height="cameraPreview.height"
-          @toggle-camera="toggleCamera"
+          v-model:cameraOn="cameraOn"
+          v-model:cameraFps="cameraFps"
+          v-model:actuatorAngleX="actuatorAngleX"
+          v-model:actuatorAngleY="actuatorAngleY"
+          :previewWidth="previewWidth"
+          :previewHeight="previewHeight"
         />
+      </div>
 
-        <!-- Экран F.R.A.I -->
+      <!-- 2. TFT-эмулятор -->
+      <div class="frai-cell tft-cell">
         <TFTScreenPanel
           v-model:isAvatarOn="isAvatarOn"
-          :avatar-video="avatarVideo"
-          :placeholder-text="placeholderText"
+          avatarVideo="Привет! Я F.R.A.I."
+          placeholderText="Здесь будет ваш TFT"
         />
       </div>
 
-      <!-- Нижний ряд -->
-      <div class="row q-gutter-md full-width justify-center">
-        <!-- Микрофон -->
-        <div class="frai-block" style="width: 500px">
-          <q-card flat bordered class="bg-grey-10 text-white">
-            <q-card-section class="row items-center justify-between">
-              <div class="column items-center q-gutter-xs">
-                <q-circular-progress
-                  :value="micSignalLevel * 100"
-                  size="100px"
-                  show-value
-                  font-size="12px"
-                  color="lime"
-                >
-                  <q-icon name="mic" size="48px" />
-                </q-circular-progress>
-                <div class="text-caption text-center">Уровень</div>
-              </div>
-              <div class="column items-center q-gutter-xs">
-                <q-toggle v-model="isMicOn" color="green" />
-                <div class="text-caption">Микрофон</div>
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
-
-        <!-- Динамик -->
-        <div class="frai-block" style="flex: 1">
-          <q-card flat bordered class="bg-grey-10 text-white">
-            <q-card-section class="row items-center justify-around">
-              <div class="column items-center q-gutter-xs">
-                <q-circular-progress
-                  :value="speakerSignalLevel * 100"
-                  size="100px"
-                  show-value
-                  font-size="12px"
-                  color="blue"
-                >
-                  <q-icon name="volume_up" size="48px" />
-                </q-circular-progress>
-                <div class="text-caption text-center">Уровень</div>
-              </div>
-              <div class="column items-center q-gutter-xs">
-                <q-slider
-                  v-model="volume"
-                  :min="0"
-                  :max="100"
-                  vertical
-                  style="height: 100px;"
-                />
-                <div class="text-caption">Громкость</div>
-              </div>
-              <div class="column items-center q-gutter-xs">
-                <q-toggle v-model="isSpeakerOn" color="green" />
-                <div class="text-caption">Звук</div>
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
+      <!-- 3. Настройки микрофона -->
+      <div class="frai-cell mic-cell">
+        <MicSettingsPanel
+          v-model:micOn="micOn"
+          v-model:micGain="micGain"
+        />
       </div>
 
+      <!-- 4. Настройки динамика -->
+      <div class="frai-cell audio-cell">
+        <AudioSettingsPanel
+          v-model:audioOn="speakerOn"
+          v-model:volume="speakerVolume"
+        />
+      </div>
     </div>
+
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref, onBeforeUnmount } from 'vue'
-import CameraPanel from 'components/camera/CameraPanel.vue'
-import TFTScreenPanel from 'components/screen/TFTScreenPanel.vue'
-import { useFraiDeviceStore } from 'src/stores/fraiDevice'
-import { storeToRefs } from 'pinia'
+import { ref } from 'vue'
 
-const isMicOn = ref(true)
-const micSignalLevel = ref(0.3)
-const isSpeakerOn = ref(true)
-const speakerSignalLevel = ref(0.4)
+// относительные импорты
+import CameraPanel from '../components/camera/CameraPanel.vue'
+import TFTScreenPanel from '../components/screen/TFTScreenPanel.vue'
+import MicSettingsPanel from '../components/mic/MicSettingsPanel.vue'
+import AudioSettingsPanel from '../components/mic/AudioSettingsPanel.vue'
 
-const isCameraOn = ref(false)
+// 📷 Камера
+const cameraOn = ref(false)
+const cameraFps = ref(30)
 const actuatorAngleX = ref(90)
 const actuatorAngleY = ref(90)
-const cameraFps = ref(30)
+const previewWidth = ref(300)
+const previewHeight = ref(250)
 
-const isAvatarOn = ref(true)
-const avatarVideo = ref('')
-const placeholderText = ref('Привет! Я F.R.A.I.')
-const volume = ref(50)
+// 📺 TFT-эмулятор
+const isAvatarOn = ref(false)
 
-const { tftResolution } = storeToRefs(useFraiDeviceStore())
-const cameraPreview = {
-  get width() {
-    return tftResolution.value.width
-  },
-  get height() {
-    return tftResolution.value.height
-  }
-}
+// 🎤 Микрофон
+const micOn = ref(false)
+const micGain = ref(0.5)
 
-const cameraVideo = ref<HTMLVideoElement | null>(null)
-let stream: MediaStream | null = null
-
-function toggleCamera(val: boolean) {
-  if (val) {
-    navigator.mediaDevices.getUserMedia({ video: true }).then((mediaStream) => {
-      stream = mediaStream
-      if (cameraVideo.value) cameraVideo.value.srcObject = stream
-    })
-  } else {
-    stream?.getTracks().forEach((track) => track.stop())
-    stream = null
-  }
-}
-
-onBeforeUnmount(() => {
-  if (stream) {
-    stream.getTracks().forEach((t) => t.stop())
-  }
-})
+// 🔊 Динамик
+const speakerOn = ref(false)
+const speakerVolume = ref(0.5)
 </script>
 
 <style scoped>
 .frai-page {
-  max-width: 1200px;
-  margin: auto;
+  padding: 20px;
+  box-sizing: border-box;
+  height: 100vh;
+  overflow: hidden;
 }
-.frai-block {
-  width: 500px;
-  height: 380px;
+
+.frai-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: 1fr 1fr;
+  gap: 20px;
+  height: 100%;
+}
+
+.frai-cell {
+  display: flex;
+}
+.frai-cell > * {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.camera-cell {
+  grid-column: 1 / 3;
+  grid-row: 1;
+}
+.tft-cell {
+  grid-column: 3 / 5;
+  grid-row: 1;
+  align-items: center;
+}
+.mic-cell {
+  grid-column: 1 / 3;
+  grid-row: 2;
+}
+.audio-cell {
+  grid-column: 3 / 5;
+  grid-row: 2;
 }
 </style>
