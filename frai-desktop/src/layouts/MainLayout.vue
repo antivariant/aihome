@@ -24,27 +24,27 @@
       <q-list>
         <q-item-label header>Навигация</q-item-label>
 
-        <q-item clickable v-ripple to="/frai" @click="leftDrawerOpen = false">
+        <q-item clickable v-ripple tag="router-link" :to="{ path: '/frai' }" @click="leftDrawerOpen = false">
           <q-item-section avatar><q-icon name="smart_toy" /></q-item-section>
           <q-item-section>Frai</q-item-section>
         </q-item>
 
-        <q-item clickable v-ripple to="/chat" @click="leftDrawerOpen = false">
+        <q-item clickable v-ripple tag="router-link" :to="{ path: '/chat' }" @click="leftDrawerOpen = false">
           <q-item-section avatar><q-icon name="chat" /></q-item-section>
           <q-item-section>Chat</q-item-section>
         </q-item>
 
-        <q-item clickable v-ripple to="/logs" @click="leftDrawerOpen = false">
+        <q-item clickable v-ripple tag="router-link" :to="{ path: '/logs' }" @click="leftDrawerOpen = false">
           <q-item-section avatar><q-icon name="list_alt" /></q-item-section>
           <q-item-section>Logs</q-item-section>
         </q-item>
 
-        <q-item clickable v-ripple to="/test" @click="leftDrawerOpen = false">
+        <q-item clickable v-ripple tag="router-link" :to="{ path: '/test' }" @click="leftDrawerOpen = false">
           <q-item-section avatar><q-icon name="developer_board" /></q-item-section>
           <q-item-section>Test</q-item-section>
         </q-item>
 
-        <q-item clickable v-ripple to="/devices" @click="leftDrawerOpen = false">
+        <q-item clickable v-ripple tag="router-link" :to="{ path: '/devices' }" @click="leftDrawerOpen = false">
           <q-item-section avatar><q-icon name="sensors" /></q-item-section>
           <q-item-section>Devices</q-item-section>
         </q-item>

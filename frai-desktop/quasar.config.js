@@ -14,6 +14,11 @@ const path = require('path');
 
 module.exports = configure(function (/* ctx */) {
   return {
+
+  // alias: {
+  //     '@': path.resolve(__dirname, 'src')
+  //   },
+
     // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
     // preFetch: true,
 
