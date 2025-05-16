@@ -1,0 +1,5 @@
+# Add Python dependencies here
+fastapi
+uvicorn[standard]
+redis>=4.5.5
+pymongo==4.13.0

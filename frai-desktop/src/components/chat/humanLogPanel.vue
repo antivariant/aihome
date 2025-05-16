@@ -1,20 +1,21 @@
 <template>
-  <q-scroll-area class="fit q-pa-md">
-    <div class="column q-gutter-sm" style="max-width: 100%;">
-      <div style="width: 100%; max-width: 480px; margin: auto">
-        <q-chat-message
-          v-for="entry in logs"
-          :key="entry._id"
-          :avatar="getAvatar(entry.actor)"
-          :name="entry.profile?.name"
-          :text="[entry.message]"
-          :stamp="formatStamp(entry)"
-          :sent="entry.actor === 'ai-engine'"
-          :bg-color="bgColor(entry.actor)"
-          text-color="black"
-        />
-      </div>
-    </div>
+  <q-scroll-area class="fit">
+    <h4>F.R.A.I.</h4>
+    <div class="column q-gutter-sm q-pa-md" style="max-width: 100%;">
+       <div style="width: 100%; margin: 0">
+         <q-chat-message
+           v-for="entry in logs"
+           :key="entry._id"
+           :avatar="getAvatar(entry.actor)"
+           :name="entry.profile?.name"
+           :text="[entry.message]"
+           :stamp="formatStamp(entry)"
+           :sent="entry.actor === 'ai-engine'"
+           :bg-color="bgColor(entry.actor)"
+           text-color="black"
+         />
+       </div>
+       </div>
   </q-scroll-area>
 </template>
 
@@ -110,7 +111,7 @@ function getAvatar(system: string): string {
   border-radius: 20% !important;
   padding: 2px;
   width: 40px !important;
-  height: 40px !important;
+  /* height: 40px !important; */
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15); /* лёгкая обводка */
 }
 
@@ -123,4 +124,15 @@ function getAvatar(system: string): string {
   background: white;
   border-radius: 0 !important;
 }
+
+h4{
+  font-size: large;
+  text-align: center;
+  margin: 10px;
+}
+
+.q-message{
+  width:100%
+}
+
 </style>

@@ -1,0 +1,6 @@
+# Add Python dependencies here
+fastapi
+uvicorn[standard]
+pymongo
+redis>=4.5.5
+httpx

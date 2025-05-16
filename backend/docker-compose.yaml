@@ -1,0 +1,300 @@
+services:
+
+  # ====================
+  # 🧠 Ядро AI-агента
+  # ====================
+  ai-engine:
+    build: ./ai-engine
+    container_name: ai-engine
+    depends_on:
+      - svc-stt
+      - svc-vision
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - HA_BASE_URL=http://192.168.31.81:8123
+      - HA_TOKEN=${HA_TOKEN}
+      - PORT=6000
+      - PYTHONPATH=/app:/app/models
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONGODB_URI=mongodb://mongo:27017
+    ports:
+      - 6000:6000
+    restart: unless-stopped
+    volumes:
+      - ./config/langchain_config.yaml:/app/langchain_config.yaml
+      - ./config/devices.yaml:/app/devices.yaml
+      - ./models:/app/models
+
+
+  # ====================
+  # 🔌 Шлюзы (Gateways)
+  # ====================
+  gw-hub:
+    build: ./gateways/hub
+    container_name: gw-hub
+    environment:
+      - PORT=5105
+      - PYTHONPATH=/app:/app/models
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONGODB_URI=mongodb://mongo:27017
+      - AI_ENGINE_URL=http://ai-engine:6000
+    ports:
+      - 5105:5105
+    volumes:
+      - ./config/system_profiles:/app/avatars
+      - ./models:/app/models
+      - ./config:/app/config
+
+  
+  gw-chat:
+    build: ./gateways/chat
+    container_name: gw-chat
+    depends_on:
+      - ai-engine
+    environment:
+      - CHAT_API_TOKEN=${CHAT_API_TOKEN}
+      - GW_HUB_URL=http://gw-hub:5105
+      - PORT=5121
+      - PYTHONPATH=/app:/app/models
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONGODB_URI=mongodb://mongo:27017
+    ports:
+      - 5121:5121
+    restart: unless-stopped
+    volumes:
+      - ./data/gw-chat/uploads:/app/uploads
+      - ./models:/app/models
+
+  gw-frai:
+    build: ./gateways/frai
+    container_name: gw-frai
+    environment:
+      - PORT=5101
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONGODB_URI=mongodb://mongo:27017
+    ports:
+      - 5101:5101
+    restart: unless-stopped
+    volumes:
+      - ./models/wav2lip/:/app/wav2lip/checkpoints
+      - ./models:/app/models
+
+  gw-dev:
+    build: ./gateways/dev
+    container_name: gw-dev
+    environment:
+      - PORT=5103
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONGODB_URI=mongodb://mongo:27017
+
+    ports:
+      - 5103:5103
+    restart: unless-stopped
+    volumes:
+      - ./models/wav2lip/:/app/wav2lip/checkpoints
+      - ./models:/app/models
+
+  # ====================
+  # 🧠 Сервисы (Services)
+  # ====================
+  svc-audio-in:
+    build: ./services/audio-in
+    container_name: svc-audio-in
+    depends_on:
+      - svc-stt
+    environment:
+      - STT_URL=http://svc-stt:5233/stt
+      - PORT=5231
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONGODB_URI=mongodb://mongo:27017
+    ports:
+      - 5231:5231
+    restart: unless-stopped
+    volumes:
+      - ./data/svc-frai-audio-in/recordings:/app/recordings
+      - ./models:/app/models
+
+  svc-audio-out:
+    build: ./services/audio-out
+    container_name: svc-audio-out
+    environment:
+      - PORT=5241
+      - TTS_URL=http://svc-tts:5243/speak
+      - TTS_WAV_PATH=/shared-wav
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONGODB_URI=mongodb://mongo:27017
+    ports:
+      - 5241:5241
+    restart: unless-stopped
+    volumes:
+      - ./data/svc-frai-audio-out/tts-wav:/shared-wav
+      - ./models:/app/models
+
+
+  svc-db:
+    build: ./services/db
+    container_name: svc-db
+    depends_on:
+      - redis
+      - mongo
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONGODB_URI=mongodb://mongo:27017
+      - PORT=5211
+    ports:
+      - 5211:5211
+    restart: unless-stopped
+
+  svc-stt:
+    build: ./services/stt
+    container_name: svc-stt
+    environment:
+      - PORT=5233
+    ports:
+      - 5233:5233
+    restart: unless-stopped
+    volumes:
+      - ./models:/app/models
+
+  svc-tts:
+    build: ./services/tts
+    container_name: svc-tts
+    environment:
+      - PORT=5243
+      - WAV_OUTPUT_DIR=/shared-wav
+      - MODELS_DIR=/models
+      - LD_LIBRARY_PATH=/app/piper
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONGODB_URI=mongodb://mongo:27017
+    ports:
+      - 5243:5243
+    restart: unless-stopped
+    volumes:
+      - ./models/piper:/models
+      - ./data/svc-tts/tts-wav:/shared-wav
+      - ./models:/app/models
+    security_opt:
+      - no-new-privileges:true
+
+  svc-vision:
+    build: ./services/vision
+    container_name: svc-vision
+    environment:
+      - PORT=5251
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONGODB_URI=mongodb://mongo:27017
+    ports:
+      - 5251:5251
+    restart: unless-stopped
+    volumes:
+      - ./models/vision:/models
+      - ./models:/app/models
+
+  svc-screen_vision:
+    build: ./services/screen-vision
+    container_name: svc-screen_vision
+    environment:
+      - PORT=5261
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONGODB_URI=mongodb://mongo:27017
+    ports:
+      - 5261:5261
+    restart: unless-stopped
+    volumes:
+      - ./models:/app/models
+
+  svc-actuators:
+    build: ./services/actuators
+    container_name: svc-actuators
+    environment:
+      - PORT=5271
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MONGODB_URI=mongodb://mongo:27017
+    ports:
+      - 5271:5271
+    restart: unless-stopped
+    volumes:
+      - ./models:/app/models
+
+  # ====================
+  # ⚙️ Драйверы (Drivers)
+  # ====================
+  # drv-mic-usb:
+  #   build: ./drivers/mic-usb
+  #   container_name: drv-mic-usb
+  #   depends_on:
+  #     - svc-audio-in
+  #   environment:
+  #     - AUDIO_FILE=/app/audio/mock_audio.wav
+  #     - STREAM_INTERVAL=5
+  #     - TARGET_URL=http://svc-dev-audio-in:5232/ingest
+  #     - AUDIO_GATEWAY_URL=http://svc-dev-audio-in:5232/receive-audio
+  #     - PORT=5330
+  #   ports:
+  #     - 52711:52711
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./data/drv-mic-usb/audio:/app/audio
+
+
+  # drv-mic-coreaudio:
+  #   build: ./drivers/mic-coreaudio
+  #   container_name: drv-mic-coreaudio
+  #   depends_on:
+  #     - svc-audio-in
+  #   environment:
+  #     - TARGET_URL=http://svc-dev-audio-in:5231/ingest
+  #     - PORT=5330
+  #     - DEVICE_ID=dev-macbook-001
+  #     - IS_FRAI=false
+  #     - CHUNK_DURATION=2.0
+  #     - OVERLAP_DURATION=0.5
+  #   ports:
+  #     - 52712:52712
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./data/drv-mic-usb/audio:/app/audio
+
+
+
+  # ====================
+  # 📆 Базы данных и брокеры
+  # ====================
+  mongo:
+    container_name: mongo
+    image: mongo:7
+    ports:
+      - 27017:27017
+    restart: unless-stopped
+    volumes:
+      - ./data/mongo/data:/data/db
+
+  redis:
+    container_name: redis
+    image: redis:7-alpine
+    ports:
+      - 6379:6379
+    restart: unless-stopped
+    volumes:
+      - ./data/redis/data:/data
+
+  mqtt:
+    image: eclipse-mosquitto
+    ports:
+      - 1883:1883
+      - 9001:9001
+    volumes:
+      - ./config/mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
+
