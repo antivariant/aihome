@@ -13,10 +13,12 @@
             <span class="text-grey-9">{{ msg.stamp }}</span>
             <q-chip
               v-if="!msg.sent && msg.interactionId"
+              clickable
               dense
               outline
               class="interaction-badge q-ml-sm"
-              text-color="grey-9"
+              :class="{ 'interaction-selected': msg.interactionId === selectedInteraction }"
+              :text-color="msg.interactionId === selectedInteraction ? 'white' : 'grey-9'"
               @click.prevent="selectInteraction(msg.interactionId)"
             >
               {{ msg.interactionId }}
@@ -30,17 +32,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { defineEmits } from 'vue'
 import { useChatStore } from 'stores/chat'
-
-// Событие на выбор human log
-const emit = defineEmits<{
-  (e: 'select-interaction', id: string): void
-}>()
-
-function selectInteraction(id: string) {
-  emit('select-interaction', id)
-}
 
 const chatStore = useChatStore()
 
@@ -53,22 +45,27 @@ interface Msg {
   sent: boolean
 }
 
-// Подготовка данных для QChatMessage
-const messages = computed<Msg[]>(() => {
-  return chatStore.messages.map(entry => {
-    // безопасно подставляем interaction_id или пустую строку
-    const interactionId = entry.interaction_id ?? ''
+// Подготовка списка сообщений
+const messages = computed<Msg[]>(() =>
+  chatStore.messages.map(entry => ({
+    id: entry.id,
+    interactionId: entry.interaction_id ?? '',
+    name: entry.fromUser ? 'You' : 'Bot',
+    text: entry.text,
+    stamp: new Date(entry.timestamp).toLocaleTimeString(),
+    sent: entry.fromUser
+  }))
+)
 
-    return {
-      id: entry.id,
-      interactionId,
-      name: entry.fromUser ? 'You' : 'Bot',
-      text: entry.text,
-      stamp: new Date(entry.timestamp).toLocaleTimeString(),
-      sent: entry.fromUser
-    }
-  })
-})
+// Текущий выбранный interaction_id из стора
+const selectedInteraction = computed<string | undefined>(
+  () => chatStore.interaction_id
+)
+
+// По клику устанавливаем новый interaction_id
+function selectInteraction(id: string) {
+  chatStore.setInteractionId(id)
+}
 </script>
 
 <style scoped>
@@ -79,5 +76,10 @@ const messages = computed<Msg[]>(() => {
 .interaction-badge {
   cursor: pointer;
   border-radius: 12px;
+}
+
+/* Выделенный бейдж: белый текст и белая рамка */
+.interaction-selected {
+  border-color: white !important;
 }
 </style>
