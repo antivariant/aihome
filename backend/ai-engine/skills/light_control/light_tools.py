@@ -1,46 +1,49 @@
-import asyncio
-from .parser import find_device, parse_brightness
-from .ha_client import AsyncHAClient
+# skills/light_control/light_tools.py
 
-async def _turn_on_light(text: str) -> str:
-    room_id, device_id = find_device(text)
-    client = AsyncHAClient()
-    await client.call_service("switch", "turn_on", {"entity_id": device_id})
-    return f"Включаю «{device_id}» в комнате «{room_id}»."
+import os
+import httpx
+from skills.light_control.parser import find_device, parse_brightness  # явный импорт без точки
 
-def turn_on_light(text: str) -> str:
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(_turn_on_light(text))
-    finally:
-        loop.close()
+HA_URL = os.getenv("HA_URL")
+HA_TOKEN = os.getenv("HA_TOKEN")
+HEADERS = {
+    "Authorization": f"Bearer {HA_TOKEN}",
+    "Content-Type": "application/json",
+}
 
-async def _turn_off_light(text: str) -> str:
-    room_id, device_id = find_device(text)
-    client = AsyncHAClient()
-    await client.call_service("switch", "turn_off", {"entity_id": device_id})
-    return f"Выключаю «{device_id}» в комнате «{room_id}»."
 
-def turn_off_light(text: str) -> str:
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(_turn_off_light(text))
-    finally:
-        loop.close()
+async def turn_on_light(text: str) -> str:
+    room_id, entity_id = find_device(text)
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{HA_URL}/api/services/homeassistant/turn_on",
+            json={"entity_id": entity_id},
+            headers=HEADERS,
+        )
+        resp.raise_for_status()
+    return f"Лампа «{entity_id}» в комнате «{room_id}» включена."
 
-async def _set_brightness(text: str) -> str:
-    room_id, device_id = find_device(text)
-    brightness = parse_brightness(text)
-    client = AsyncHAClient()
-    await client.call_service("light", "turn_on", {
-        "entity_id": device_id,
-        "brightness_pct": brightness
-    })
-    return f"Устанавливаю яркость «{device_id}» в комнате «{room_id}» на {brightness}%."
 
-def set_brightness(text: str) -> str:
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(_set_brightness(text))
-    finally:
-        loop.close()
+async def turn_off_light(text: str) -> str:
+    room_id, entity_id = find_device(text)
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{HA_URL}/api/services/homeassistant/turn_off",
+            json={"entity_id": entity_id},
+            headers=HEADERS,
+        )
+        resp.raise_for_status()
+    return f"Лампа «{entity_id}» в комнате «{room_id}» выключена."
+
+
+async def set_brightness(text: str) -> str:
+    room_id, entity_id = find_device(text)
+    pct = parse_brightness(text)
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{HA_URL}/api/services/light/turn_on",
+            json={"entity_id": entity_id, "brightness_pct": pct},
+            headers=HEADERS,
+        )
+        resp.raise_for_status()
+    return f"Яркость лампы «{entity_id}» в комнате «{room_id}» установлена на {pct}%."
