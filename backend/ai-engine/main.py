@@ -23,14 +23,14 @@ async def process(body: BodyModel):
         session_id=body.session_id,
         interaction_id=body.interaction_id,
     )
-    hlog(body.input_data, target="gw-hub")
+    hlog(body.input_data, target="ai-engine")
 
     # 2) подготовить колбэк для логирования Thought/Action/Observation
     agent_logger = AgentMongoLogger(
         session_id=body.session_id,
         interaction_id=body.interaction_id,
         actor="ai-engine",
-        target="gw-hub",
+        target="ai-engine",
     )
 
     # 3) запустить агента с колбэками
