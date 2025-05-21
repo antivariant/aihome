@@ -1,0 +1,31 @@
+rooms:
+  - id: office
+    name: "Кабинет"
+    aliases:
+      - "Моя комната"
+    geometry:
+      x: 10
+      y: 10
+      width: 210
+      height: 200
+
+    devices:
+      # 1) дискретные лампы (только вкл/выкл)
+      lights:
+        - name: "desk_lamp"
+          entity_id: "switch.sonoff_10002ed516"
+          aliases:
+            - "настольная лампа"
+            - "настольный свет"
+            - "desk lamp"
+          capabilities:
+            - on_off
+
+        - name: "ceiling_lamp"
+          entity_id: "light.yeelight_ceiling"
+          aliases:
+            - "верхний свет"
+            - "потолочная лампа"
+          capabilities:
+            - on_off
+            - brightness

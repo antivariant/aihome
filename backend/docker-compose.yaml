@@ -11,7 +11,7 @@ services:
       - svc-vision
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - HA_BASE_URL=http://192.168.31.81:8123
+      - HA_URL=http://192.168.31.81:8123
       - HA_TOKEN=${HA_TOKEN}
       - PORT=6000
       - PYTHONPATH=/app:/app/models
@@ -22,8 +22,7 @@ services:
       - 6000:6000
     restart: unless-stopped
     volumes:
-      - ./config/langchain_config.yaml:/app/langchain_config.yaml
-      - ./config/devices.yaml:/app/devices.yaml
+      - ./config:/app/config
       - ./models:/app/models
 
 

@@ -34,7 +34,7 @@ export const useChatStore = defineStore('chat', {
         form.append('user_id', 'user123');
         form.append('text', text);
 
-        const res = await apiChat.post('/send', form, {
+        const res = await apiChat.post('/question', form, {
           headers: {
             Authorization: 'Bearer supersecuretoken',
           },
