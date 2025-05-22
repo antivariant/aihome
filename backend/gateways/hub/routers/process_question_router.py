@@ -1,4 +1,4 @@
-# routers/send_engine_routes.py
+# routers/process_question_routes.py
 
 from fastapi import APIRouter, Request, HTTPException
 from starlette.status import HTTP_400_BAD_REQUEST
@@ -43,8 +43,8 @@ async def send_to_engine(input: AgentInput, request: Request):
 
     # Логируем ответ от AI Engine
     hlog(
-        message=f"Получен ответ от AI Engine: {result.get('response', '')}",
-        target="gw-hub"
+        message=f"Получен ответ от AI Engine: {result.get('output', '')}",
+        target="gw-chat"
     )
     tlog(
         level="INFO",

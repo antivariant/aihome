@@ -94,4 +94,16 @@ async def send_input(
     resp = await client.post(f"{GW_HUB_URL}/process/question", json=agent_input.model_dump(), timeout=60.0)
     data = resp.json()
     data.update(session_id=session_id, interaction_id=interaction_id)
+
+    # ← Добавляем лог получения ответа от хаба
+    hlog(
+        f"Получен ответ от gw-hub: {data.get('output', data.get('response', ''))}",
+        "gw-chat"
+    )
+    # (Если хотите ещё видеть момент отправки пользователю, то можно добавить:)
+    hlog(
+        f"Отправляю ответ пользователю: {data.get('output', data.get('response',''))}",
+        "user"
+    )
+
     return data

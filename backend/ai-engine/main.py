@@ -19,7 +19,7 @@ class BodyModel(BaseModel):
 async def process(body: BodyModel):
     # 1) залогировать вход пользователя
     hlog = make_human_logger(
-        actor="gw-chat",
+        actor="gw-hub",
         session_id=body.session_id,
         interaction_id=body.interaction_id,
     )

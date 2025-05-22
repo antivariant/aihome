@@ -42,7 +42,7 @@ export const useChatStore = defineStore('chat', {
 
         const reply: Message = {
           id: Math.random().toString(36).substring(2, 8),
-          text: res.data.response,
+          text: res.data.output,
           fromUser: false,
           timestamp: new Date().toISOString(),
           interaction_id: res.data.interaction_id // 🆕 добавлено
